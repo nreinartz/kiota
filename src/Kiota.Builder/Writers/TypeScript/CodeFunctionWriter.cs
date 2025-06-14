@@ -624,7 +624,35 @@ public class CodeFunctionWriter(TypeScriptConventionService conventionService) :
         }
         else if (GetOriginalComposedType(otherProp.Type) is { } composedType)
         {
-            var expression = string.Join(" ?? ", composedType.Types.Select(codeType => $"n.{conventions.GetDeserializationMethodName(codeType, codeFile, composedType.IsCollection)}"));
+            string? expression = null;
+
+            if (!composedType.IsComposedOfObjects(IsPrimitiveType))
+            {
+                //We have to be wary of the correct order of deserialization
+                //Primitives > List[Objects] > Objects > List[Primitives]
+
+                var primitiveTypes = composedType.Types.Where(x => IsPrimitiveType(x, composedType));
+                var primitiveCollectionTypes = composedType.Types.Where(x => x.IsCollection && IsPrimitiveType(x, composedType, false));
+
+                var complexTypes = composedType.Types.Where(x => !IsPrimitiveType(x, composedType, false));
+                var complexNonCollectionTypes = complexTypes.Where(x => !x.IsCollection);
+                var complexCollectionTypes = complexTypes.Where(x => x.IsCollection);
+
+                List<CodeType> expressionOrder = [
+                    ..primitiveTypes,
+                    ..complexCollectionTypes,
+                    ..complexNonCollectionTypes,
+                    ..primitiveCollectionTypes
+                ];
+
+                expression = string.Join(" ?? ", expressionOrder.Select(codeType => $"n.{conventions.GetDeserializationMethodName(codeType, codeFile, composedType.IsCollection)}"));
+            }
+            else
+            {
+                var objectDeserializationMethodName = conventions.GetDeserializationMethodName(composedType, codeFile, composedType.IsCollection);
+                expression = $"n.{objectDeserializationMethodName}";
+            }
+
             writer.WriteLine($"\"{otherProp.WireName}\": n => {{ {paramName}.{propName} = {expression};{suffix} }},");
         }
         else

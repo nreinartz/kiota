@@ -1565,6 +1565,11 @@ public sealed class CodeFunctionWriterTests : IDisposable
             {
                 Name = "SingleObject",
                 TypeDefinition = TestHelper.CreateModelClass(modelNameSpace, "SingleObject")
+            },
+            new CodeType
+            {
+                Name = "integer",
+                CollectionKind = CodeTypeBase.CodeTypeCollectionKind.Array
             });
         parentClass.AddProperty(new CodeProperty
         {
@@ -1582,8 +1587,51 @@ public sealed class CodeFunctionWriterTests : IDisposable
         writer.Write(serializeFunction);
         var result = tw.ToString();
 
-        Assert.Contains("\"property\": n => { parentClass.property = n.getCollectionOfObjectValues<ArrayOfObjects>(createArrayOfObjectsFromDiscriminatorValue) ?? n.getNumberValue() ?? n.getObjectValue<SingleObject>(createSingleObjectFromDiscriminatorValue) ?? n.getStringValue(); }", result);
+        Assert.Contains("\"property\": n => { parentClass.property = n.getNumberValue() ?? n.getStringValue() ?? n.getCollectionOfObjectValues<ArrayOfObjects>(createArrayOfObjectsFromDiscriminatorValue) ?? n.getObjectValue<SingleObject>(createSingleObjectFromDiscriminatorValue) ?? n.getCollectionOfPrimitiveValues<number>(); }", result);
     }
+
+    // [Fact]
+    // public async Task Writes_CodeUnionBetweenObjectsWithDiscriminator_DeserializerAsync()
+    // {
+    //     var generationConfiguration = new GenerationConfiguration { Language = GenerationLanguage.TypeScript };
+    //     var parentClass = TestHelper.CreateModelClassInModelsNamespace(generationConfiguration, root, "parentClass");
+    //     var method = TestHelper.CreateMethod(parentClass, MethodName, ReturnTypeName);
+    //     method.Kind = CodeMethodKind.Deserializer;
+    //     method.IsAsync = false;
+
+    //     var modelNameSpace = root.AddNamespace($"{root.Name}.models");
+    //     var composedType = new CodeUnionType { Name = "Union" };
+    //     composedType.AddType(new CodeType { Name = "string" }, new CodeType { Name = "int" },
+    //         new CodeType
+    //         {
+    //             Name = "ArrayOfObjects",
+    //             CollectionKind = CodeTypeBase.CodeTypeCollectionKind.Array,
+    //             TypeDefinition = TestHelper.CreateModelClass(modelNameSpace, "ArrayOfObjects")
+    //         },
+    //         new CodeType
+    //         {
+    //             Name = "SingleObject",
+    //             TypeDefinition = TestHelper.CreateModelClass(modelNameSpace, "SingleObject")
+    //         });
+    //     parentClass.AddProperty(new CodeProperty
+    //     {
+    //         Name = "property",
+    //         Type = composedType
+    //     });
+
+    //     TestHelper.AddSerializationPropertiesToModelClass(parentClass);
+    //     await ILanguageRefiner.RefineAsync(new GenerationConfiguration { Language = GenerationLanguage.TypeScript }, root);
+    //     var serializeFunction = root.FindChildByName<CodeFunction>($"DeserializeInto{parentClass.Name.ToFirstCharacterUpperCase()}");
+    //     Assert.NotNull(serializeFunction);
+    //     var parentNS = serializeFunction.GetImmediateParentOfType<CodeNamespace>();
+    //     Assert.NotNull(parentNS);
+    //     parentNS.TryAddCodeFile("foo", serializeFunction);
+    //     writer.Write(serializeFunction);
+    //     var result = tw.ToString();
+    //     Console.WriteLine(result);
+    //     Assert.Contains("\"property\": n => { parentClass.property = n.getNumberValue() ?? n.getStringValue() ?? n.getCollectionOfObjectValues<ArrayOfObjects>(createArrayOfObjectsFromDiscriminatorValue) ?? n.getObjectValue<SingleObject>(createSingleObjectFromDiscriminatorValue) ?? n.getCollectionOfPrimitiveValues<number>(); }", result);
+    // }
+
     [Fact]
     public void WritesByteArrayPropertyDeserialization()
     {
